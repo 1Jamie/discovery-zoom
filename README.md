@@ -2,7 +2,7 @@
 
 discovery.sh script designed to pull information off of zoom callrec servers
 
-Supports 4x 5x and 6x
+Supports 4x 5x 6x and 7x boxes
 
 -h shows help command
 

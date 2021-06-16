@@ -10,5 +10,5 @@ Supports 4x 5x 6x and 7x boxes
 
 -s starts sftp after running
 
-For any issues with the script, please email me at jamie.charlton@zoomint.com
+For any issues with the script, please email me at jamie.charlton@eleveo.com
 and I will work on fixing the issue as soon as I can

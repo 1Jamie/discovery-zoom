@@ -16,7 +16,7 @@
 #          Options: run script with -h parameter to see output for flags
 #                   run script with -s to start a sftp session after run
 #                   run script with -c to collect cmdb which will be in the
-#                     /home/admin/techinfo/ folder with the log file
+#                     /home/admin/info(hostname)/ folder with the log file
 #
 #           Author: Jamie Charlton
 #
@@ -27,15 +27,17 @@
 ############################################################################
 
 #sourcing binaries and making variable for the flagging
+isccx=null
+iscce=null
 sync=null
-writeDir=/home/admin/techInfo
 webadmin=/opt/callrec/etc/webadmin.xml
 ldapAttr=(address port dn domain user password loginAttr firstNameAttr lastNameAttr emailAttr GroupFilterEnabled groupFilterAttribute)
 uccxinf=(primaryHost primaryPort username password)
 ucceInf=(ctiIPAddressA ctiPortA ctiIPAddressB ctiPortB)
 hostname=$(hostname)
 sniffers=/etc/callrec/sniffers.xml
-location=/home/admin/techInfo/${hostname}_tech_discovery.log
+writeDir=/home/admin/info_${hostname}
+location=/home/admin/info_${hostname}/${hostname}_tech_discovery.log
 solr=/opt/encourage/data-solr/
 solr65=/opt/solr/server/solr
 core=/opt/callrec/etc/core.xml
@@ -140,7 +142,7 @@ finishWrite
 
 #Need to create a switch for different version in which to set the search for xpath on delete rules
 case "$version" in
-  6)
+  6|7)
     utils="echo ls du free psql date lscpu ifconfig df cd awk grep sed cat date mkdir mv sftp xpath uptime"
     mlm2=( enabled intervalClass time onlyIfSynchronized onlyIfArchived deleteDatabase  )
     callrecStatus=/opt/callrec/bin/callrec-status
@@ -199,7 +201,7 @@ echo CPU INFO: >>"$location"
 lineDash
 uptime >>"$location"
 case "$version" in
-  5 | 6)
+  5|6|7)
     lscpu | grep -v "Flags" >>"$location"
   ;;
   4)
@@ -223,7 +225,7 @@ echo "Getting Storage Info"
 echo STORAGE: >>"$location"
 lineDash
 case "$version" in
-  6)
+  6|7)
     df -h --output=source,size,used,avail >>"$location"
   ;;
   4|5)
@@ -238,12 +240,27 @@ esac
 finishWrite
 echo >>"$location"
 
+#check all services set to run
+echo "Getting Enabled Services"
+echo Enabled Services: >>"$location"
+lineDash
+case "$version" in
+  6|7)
+    qm-services >>"$location"
+  ;;
+  4|5)
+    grep '="1"' /opt/callrec/etc/callrec.conf | awk -F '[_=]' '{print $2}' >>"$location"
+  ;;
+esac
+finishWrite
+echo >>"$location"
+
 #write info for concurrent calls max
 echo "Checking License Info"
 echo LICENSE: >>"$location"
 lineDash
 case "$version" in
-  6)
+  6|7)
     "$callrecStatus" -state all -verbosity 5 | grep 20001 | awk -F " - " ' {print $2}' >>"$location"
     echo >>"$location"
     echo 'Checking Recorder Status if Present':
@@ -388,8 +405,25 @@ echo "Integrations Info:" >>"$location"
 lineDash
 
 #Check For UCCE
-ucce="$(systemctl is-enabled callrec-ucce)"
-if [ "$ucce" == "enabled" ]; then
+case $version in
+6|7)
+  ucce="$(systemctl is-enabled callrec-ucce)"
+  if [ "$ucce" == "enabled" ]; then
+    iscce=true
+  else
+    iscce=false
+  fi
+  ;;
+4|5)
+  ucce=$(grep RUN_IPCC /opt/callrec/etc/callrec.conf)
+  if [ "$ucce" != 'RUN_IPCC="0"' ]; then
+    iscce=true
+  else
+    iscce=false
+  fi
+;;
+esac
+if [ "$iscce" = true ];then 
   echo "UCCE is in use"
   echo "UCCE Information" >>"$location"
   lineDash
@@ -410,15 +444,33 @@ else
 fi
 
 #Check For UCCX
-uccx="$(systemctl is-enabled callrec-uccx)"
-if [ "$uccx" == "enabled" ]; then
+case $version in
+6|7)
+  uccx="$(systemctl is-enabled callrec-uccx)"
+  if [ "$uccx" == "enabled" ]; then
+    isccx=true
+  else
+    isccx=false
+  fi
+;;
+4|5)
+  ccx_enabled=$(grep RUN_IPCCEX /opt/callrec/etc/callrec.conf)
+  if [ "$ccx_enabled" != 'RUN_IPCCEX="0"' ]; then
+    isccx=true
+  else
+    isccx=false
+  fi
+;;
+esac
+
+if [ "$isccx" == true ]; then
   echo "UCCX Is In Use, Getting UCCX Info"
   echo "UCCX Server Information" >>"$location"
   lineDash
   for uccxIn in "${uccxinf[@]}"
-  do
-    xmlGet ipccex uccx "$uccxIn" "$integrations" | rmFmt >> $location
-  done
+    do
+      xmlGet ipccex uccx "$uccxIn" "$integrations" | rmFmt >> $location
+    done
 else
   echo NO UCCX INTEGRATION >>"$location"
   echo 'No UCCX Integration'
@@ -439,17 +491,20 @@ if [ $sync != 0 ]; then
 else
   echo USERS SYNC NOT IN USE IN SC >>"$location"
 fi
-if [ $version -eq 6 ]; then
-  echo 'Checking Size of Solr'
-  if [ $fullversionParse -ge "65" ]; then
-    echo SOLR DATABASE SIZE: $(du -ch $solr65 | tail -n 1) >>"$location"
-  else
-    echo SOLR DATABASE SIZE: $(du -ch $solr | tail -n 1) >>"$location"
-    echo >>"$location"
-  fi
-else
-  echo NO SOLR IN $version .x SKIPPING CHECK
-fi
+case "$version" in
+  6|7)
+    echo 'Checking Size of Solr'
+    if [ $fullversionParse -ge "65" ]; then
+      echo SOLR DATABASE SIZE: $(du -ch $solr65 | tail -n 1) >>"$location"
+    else
+      echo SOLR DATABASE SIZE: $(du -ch $solr | tail -n 1) >>"$location"
+      echo >>"$location"
+    fi
+  ;;
+  5|6)
+    echo NO SOLR IN $version .x SKIPPING CHECK
+  ;;
+esac
 echo >>"$location"
 echo $(which psql) ENTRIES: >>"$location"
 lineDash
@@ -467,6 +522,8 @@ echo >>"$location"
 if [ "$cmdb" ]; then
   echo "Running CMDB"
   /opt/callrec/bin/scripts/cmdb.sh -d $writeDir
+  echo "Compressing Info Folder"
+  tar -czvf info_$(hostname)_$(date +"%m%d%y").gz /home/admin/info_$hostname/
 fi
 
 #handles the sftp declared by flag

@@ -4,7 +4,7 @@
 #
 #           Script: discovery.sh
 #
-#           Version: 1.0
+#           Version: 1.0.1
 #
 #            Usage: discovery.sh [-h] [-s] [-c]
 #
@@ -20,9 +20,9 @@
 #
 #           Author: Jamie Charlton
 #
-#             Date: 06.12.2019
+#             Date: 08.30.2021
 #
-#        Copyright: (c) 2019 ZOOM International
+#        Copyright: (c) 2021 ZOOM International
 #
 ############################################################################
 

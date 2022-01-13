@@ -6,7 +6,7 @@ Supports 4x 5x 6x and 7x boxes
 
 -h shows help command
 
--c pulls the system cmdb while running and will compress discovery script output and cmdb into single archive
+-c pulls the system cmdb while running
 
 -s starts sftp after running
 

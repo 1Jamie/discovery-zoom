@@ -522,8 +522,9 @@ echo >>"$location"
 if [ "$cmdb" ]; then
   echo "Running CMDB"
   /opt/callrec/bin/scripts/cmdb.sh -d $writeDir
-  echo "Compressing Info Folder"
-  tar -czvf info_$(hostname)_$(date +"%m%d%y").gz /home/admin/info_$hostname/
+## commented out due to issues, will correct later
+#  echo "Compressing Info Folder"
+#  tar -czvf info_$(hostname)_$(date +"%m%d%y").gz /home/admin/info_$hostname/
 fi
 
 #handles the sftp declared by flag

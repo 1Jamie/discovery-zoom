@@ -136,6 +136,7 @@ done
 echo Checking Version
 fullVersion=$(rpm -q qm-meta-os --queryformat "%{VERSION}")
 fullversionParse=$(rpm -q qm-meta-os --queryformat "%{VERSION}" | awk -F '[.]' ' { print $1 $2 } ' )
+osVersion=$(cat /etc/centos-release)
 
 version=$(echo "$fullVersion" | awk -F '[.]' '{print $1}')
 finishWrite
@@ -175,6 +176,7 @@ esac
 echo INFORMATION WAS GATHERED ON: >"$location"
 date >>"$location"
 echo CALLREC VERSION: $fullVersion >>"$location"
+echo OS VERSION: $osVersion >>"$location"
 echo >>"$location"
 
 #check networking info and write to file
@@ -531,5 +533,5 @@ fi
 if [ "$sftpstatus" ]; then
   echo "Enter Username "
   read username
-  sftp "$username"@file.zoomint.com
+  sftp "$username"@file.eleveo.com
 fi
